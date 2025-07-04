@@ -1,0 +1,33 @@
+# Terraform files
+*.tfstate
+*.tfstate.*
+crash.log
+.terraform/
+.terraform.lock.hcl
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraform.tfvars
+terraform.tfvars
+terraform.tfvars.json
+
+# Local environment files
+.env
+*.env
+
+# Logs & temp files
+*.log
+*.tmp
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# VSCode and JetBrains IDEs
+.vscode/
+.idea/
+
+# Python virtualenv (if Checkov is used locally)
+.venv/
+venv/
