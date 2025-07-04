@@ -14,6 +14,7 @@ module "vpc" {
   availability_zone_a  = var.availability_zone_a
   availability_zone_b  = var.availability_zone_b
   default_route_cidr   = var.default_route_cidr
+  aws_region           = var.aws_region
 }
 
 #sg module
