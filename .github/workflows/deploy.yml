@@ -16,7 +16,7 @@ jobs:
 
     defaults:
       run:
-        working-directory: envs/dev
+        working-directory: environments/dev
 
     steps:
       - name: Checkout repository
