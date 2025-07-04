@@ -65,3 +65,11 @@ resource "aws_route_table_association" "public_route_table_association_b" {
   subnet_id      = aws_subnet.public_subnet_b.id
   route_table_id = aws_route_table.public_route_table.id
 }
+
+resource "aws_flow_log" "vpc_flow" {
+  log_destination      = "arn:aws:logs:${var.aws_region}:${data.aws_caller_identity.current.account_id}:log-group:/vpc-flow-logs"
+  traffic_type         = "ALL"
+  vpc_id               = aws_vpc.vpc.id
+  log_destination_type = "cloud-watch-logs"
+  iam_role_arn         = aws_iam_role.flow_logs_role.arn
+}

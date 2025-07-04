@@ -32,3 +32,8 @@ variable "default_route_cidr" {
   description = "CIDR block for the default route (usually 0.0.0.0/0)"
   type        = string
 }
+
+variable "aws_region" {
+  description   = "region"
+  type          = string
+}
