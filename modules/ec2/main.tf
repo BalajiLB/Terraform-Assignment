@@ -26,6 +26,8 @@ resource "aws_instance" "ec2" {
   subnet_id              = each.value.subnet_id
   vpc_security_group_ids = [var.aws_security_group] 
   user_data              = file("${path.root}/../../scripts/userdata.sh")
+  monitoring             = true
+  ebs_optimized          = true
                     
   tags = {
     Name = "${var.env}-ec2-${each.key}"
