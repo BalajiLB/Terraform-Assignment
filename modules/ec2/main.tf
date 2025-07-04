@@ -24,7 +24,8 @@ resource "aws_instance" "ec2" {
   ami                    = data.aws_ami.aws_ami.id
   instance_type          = var.instance_type
   subnet_id              = each.value.subnet_id
-  vpc_security_group_ids = [var.aws_security_group] 
+  vpc_security_group_ids = [var.aws_security_group]
+  iam_instance_profile   = aws_iam_instance_profile.ec2_profile.name 
   user_data              = file("${path.root}/../../scripts/userdata.sh")
   monitoring             = true
   ebs_optimized          = true
@@ -40,9 +41,4 @@ resource "aws_instance" "ec2" {
 resource "aws_iam_instance_profile" "ec2_profile" {
   name = "${var.env}-ec2-profile"
   role = aws_iam_role.ec2_role.name
-}
-
-resource "aws_instance" "ec2" {
-  # your other configs
-  iam_instance_profile = aws_iam_instance_profile.ec2_profile.name
 }
