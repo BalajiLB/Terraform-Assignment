@@ -4,6 +4,7 @@ locals {
       description = var.ingress_descriptions[idx]
       from_port   = var.ingress_from_ports[idx]
       to_port     = var.ingress_to_ports[idx]
+      protocol    = var.ingress_protocols[idx]
       cidr_blocks = var.ingress_cidr_blocks[idx]
     }
   ]
@@ -21,7 +22,7 @@ resource "aws_security_group" "ec2_sg" {
       description = ingress.value.description
       from_port   = ingress.value.from_port
       to_port     = ingress.value.to_port
-      protocol    = "tcp"
+      protocol    = ingress.value.protocol
       cidr_blocks = ingress.value.cidr_blocks
     }
   }

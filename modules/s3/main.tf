@@ -23,6 +23,15 @@ resource "aws_s3_bucket_versioning" "versioning" {
   }
 }
 
+resource "aws_s3_bucket_versioning" "logging_versioning" {
+  bucket = aws_s3_bucket.logging_target_bucket.id
+
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
+
 # Server-side encryption with KMS
 resource "aws_kms_key" "s3_kms" {
   description         = "KMS key for ${var.env}-${var.bucket_name}"
@@ -93,6 +102,26 @@ resource "aws_s3_bucket_lifecycle_configuration" "infra_bucket_lifecycle" {
     }
   }
 }
+
+resource "aws_s3_bucket_lifecycle_configuration" "logging_lifecycle" {
+  bucket = aws_s3_bucket.logging_target_bucket.id
+
+  rule {
+    id     = "delete-logs-after-365-days"
+    status = "Enabled"
+
+    expiration {
+      days = 365
+    }
+
+    filter {}  # Apply to all objects
+
+    abort_incomplete_multipart_upload {
+      days_after_initiation = 7
+    }
+  }
+}
+
 
 # ----------------------------
 # Replication Setup

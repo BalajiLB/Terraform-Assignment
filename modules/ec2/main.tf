@@ -17,6 +17,12 @@ locals {
   }
 }
 
+# IAM Instance Profile
+resource "aws_iam_instance_profile" "ec2_profile" {
+  name = "${var.env}-instance-profile"
+  role = var.ec2_role_name
+}
+
 # EC2 instance creation using for_each
 resource "aws_instance" "ec2" {
   for_each               = local.ec2_instances
@@ -24,28 +30,25 @@ resource "aws_instance" "ec2" {
   ami                    = data.aws_ami.aws_ami.id
   instance_type          = var.instance_type
   subnet_id              = each.value.subnet_id
-  vpc_security_group_ids = [var.aws_security_group]
+  vpc_security_group_ids = var.security_group_ids
+  # Correctly referencing the security group from your module
+
   iam_instance_profile   = aws_iam_instance_profile.ec2_profile.name 
   user_data              = file("${path.root}/../../scripts/userdata.sh")
   monitoring             = true
   ebs_optimized          = true
+
   metadata_options {
     http_tokens = "required"
   }
 
   root_block_device {
-    encrypted = true
+    encrypted  = true
     kms_key_id = var.kms_key_arn
-
   }
-                    
+
   tags = {
     Name = "${var.env}-ec2-${each.key}"
     AZ   = each.value.az
   }
-}
-
-resource "aws_iam_instance_profile" "ec2_profile" {
-  name = "${var.env}-instance-profile"
-  role = var.ec2_role_name
 }

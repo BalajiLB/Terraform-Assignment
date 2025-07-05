@@ -57,7 +57,6 @@ module "vpc" {
   aws_region           = var.aws_region
   flow_logs_role_arn   = aws_iam_role.flow_logs_role.arn
 
-
 }
 
 #sg module  
@@ -71,6 +70,7 @@ module "sg" {
   ingress_from_ports   = var.ingress_from_ports
   ingress_to_ports     = var.ingress_to_ports
   ingress_cidr_blocks  = var.ingress_cidr_blocks
+  ingress_protocols    = var.ingress_protocols
 
   # Egress variables
   egress_from_port   = var.egress_from_port
@@ -89,7 +89,9 @@ module "ec2" {
   instance_type      = var.instance_type
   public_subnet_a_id = module.vpc.public_subnet_a_id
   public_subnet_b_id = module.vpc.public_subnet_b_id
-  aws_security_group = module.sg.ec2_sg
+  vpc_security_group_ids = var.security_group_ids
+
+  security_group_ids = [module.sg.ec2_sg_id]
   ec2_role_name      = aws_iam_role.ec2_role.name
   kms_key_arn        = aws_kms_key.s3_kms.arn
 }

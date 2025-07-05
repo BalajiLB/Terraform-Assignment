@@ -48,3 +48,8 @@ variable "tags" {
   type        = map(string)
   description = "Common tags"
 }
+
+variable "ingress_protocols" {
+  type        = list(string)
+  description = "Protocols for each ingress rule"
+}

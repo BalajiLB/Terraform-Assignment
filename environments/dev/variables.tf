@@ -114,3 +114,9 @@ variable "tags" {
   description = "Common tags applied to all resources"
   type        = map(string)
 }
+
+variable "ingress_protocols" {
+  type        = list(string)
+  description = "Protocols for each ingress rule"
+}
+
