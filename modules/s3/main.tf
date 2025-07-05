@@ -32,27 +32,47 @@ resource "aws_s3_bucket_versioning" "logging_versioning" {
 }
 
 
-# Server-side encryption with KMS
+# Update the KMS key policy
 resource "aws_kms_key" "s3_kms" {
   description         = "KMS key for ${var.env}-${var.bucket_name}"
   enable_key_rotation = true
 
-  policy = <<EOF
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Sid": "AllowAccountRoot",
-      "Effect": "Allow",
-      "Principal": { "AWS": "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root" },
-      "Action": "kms:*",
-      "Resource": "*"
-    }
-  ]
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Sid    = "AllowAccountRoot",
+        Effect = "Allow",
+        Principal = {
+          AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
+        },
+        Action   = "kms:*",
+        Resource = "*"
+      },
+      # Add this new statement
+      {
+        Sid    = "AllowS3Services",
+        Effect = "Allow",
+        Principal = {
+          Service = "s3.amazonaws.com"
+        },
+        Action = [
+          "kms:Encrypt",
+          "kms:Decrypt",
+          "kms:ReEncrypt*",
+          "kms:GenerateDataKey*",
+          "kms:DescribeKey"
+        ],
+        Resource = "*",
+        Condition = {
+          StringEquals = {
+            "aws:SourceAccount" = data.aws_caller_identity.current.account_id
+          }
+        }
+      }
+    ]
+  })
 }
-EOF
-}
-
 
 resource "aws_s3_bucket_server_side_encryption_configuration" "default" {
   bucket = aws_s3_bucket.infra_bucket.id
@@ -148,18 +168,16 @@ resource "aws_s3_bucket_versioning" "replication_target_versioning" {
   }
 }
 
-resource "aws_s3_bucket_notification" "replication_target_bucket_notifications" {
-  bucket = aws_s3_bucket.replication_target_bucket.id
-
-  # Example - add a dummy configuration to satisfy the check
-  lambda_function {
-    lambda_function_arn = "arn:aws:lambda:us-west-2:123456789012:function:dummy-function"
-    events              = ["s3:ObjectCreated:*"]
+# Add this for logging_target_bucket
+resource "aws_s3_bucket_notification" "logging_notification" {
+  bucket = aws_s3_bucket.logging_target_bucket.id
+  
+  # Add at least one notification type
+  topic {
+    topic_arn = "arn:aws:sns:${var.region}:${data.aws_caller_identity.current.account_id}:dummy-topic"
+    events    = ["s3:ObjectCreated:*"]
   }
-
-  depends_on = [aws_s3_bucket.replication_target_bucket]
 }
-
 
 # Enable encryption on replication target bucket
 resource "aws_s3_bucket_server_side_encryption_configuration" "bucket_encryption" {
@@ -169,6 +187,38 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "bucket_encryption
     apply_server_side_encryption_by_default {
       sse_algorithm     = "aws:kms"
       kms_master_key_id = aws_kms_key.s3_kms.arn
+    }
+  }
+}
+
+# Update the encryption configuration
+resource "aws_s3_bucket_server_side_encryption_configuration" "logging_bucket_encryption" {
+  bucket = aws_s3_bucket.logging_target_bucket.id
+
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm     = "aws:kms"  # Changed from AES256
+      kms_master_key_id = aws_kms_key.s3_kms.arn
+    }
+  }
+}
+
+# replication_target_bucket
+resource "aws_s3_bucket_lifecycle_configuration" "replication_target_lifecycle" {
+  bucket = aws_s3_bucket.replication_target_bucket.id
+
+  rule {
+    id     = "expire-objects"
+    status = "Enabled"
+
+    expiration {
+      days = 365
+    }
+
+    filter {}
+    
+    abort_incomplete_multipart_upload {
+      days_after_initiation = 7
     }
   }
 }
@@ -243,6 +293,7 @@ resource "aws_s3_bucket_replication_configuration" "infra_replication" {
   }
 }
 
+
 # ----------------------------
 # Logging Target Bucket
 # ----------------------------
@@ -282,6 +333,13 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "logging_bucket_en
       sse_algorithm = "AES256"
     }
   }
+}
+
+# Replication_target_bucket
+resource "aws_s3_bucket_logging" "replication_target_logging" {
+  bucket        = aws_s3_bucket.replication_target_bucket.id
+  target_bucket = aws_s3_bucket.logging_target_bucket.id
+  target_prefix = "replication-logs/"
 }
 
 # ----------------------------
