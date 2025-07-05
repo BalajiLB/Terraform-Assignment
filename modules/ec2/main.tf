@@ -38,7 +38,8 @@ resource "aws_instance" "ec2" {
     AZ   = each.value.az
   }
 }
+
 resource "aws_iam_instance_profile" "ec2_profile" {
-  name = "${var.env}-ec2-profile"
-  role = aws_iam_role.ec2_role.name
+  name = "${var.env}-instance-profile"
+  role = var.ec2_role_name
 }

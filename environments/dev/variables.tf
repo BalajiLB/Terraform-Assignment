@@ -99,3 +99,8 @@ variable "tags" {
   type        = map(string)
   description = "Common tags applied to all resources"
 }
+
+variable "ec2_role_name" {
+  description = "IAM Role name to attach to EC2 instance profile"
+  type        = string
+}
