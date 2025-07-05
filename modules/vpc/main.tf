@@ -75,3 +75,12 @@ resource "aws_flow_log" "vpc_flow" {
   log_destination_type = "cloud-watch-logs"
   iam_role_arn         = var.flow_logs_role_arn
 }
+
+# Restrict Default Security Group (CKV2_AWS_12)
+
+resource "aws_default_security_group" "default" {
+  vpc_id = aws_vpc.vpc.id
+
+  ingress = [] # Remove all inbound rules
+  egress  = [] # Remove all outbound rules
+}
