@@ -89,8 +89,6 @@ module "ec2" {
   instance_type      = var.instance_type
   public_subnet_a_id = module.vpc.public_subnet_a_id
   public_subnet_b_id = module.vpc.public_subnet_b_id
-  vpc_security_group_ids = var.security_group_ids
-
   security_group_ids = [module.sg.ec2_sg_id]
   ec2_role_name      = aws_iam_role.ec2_role.name
   kms_key_arn        = aws_kms_key.s3_kms.arn
