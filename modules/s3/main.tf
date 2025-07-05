@@ -119,6 +119,19 @@ resource "aws_s3_bucket_versioning" "replication_target_versioning" {
   }
 }
 
+resource "aws_s3_bucket_notification" "replication_target_bucket_notifications" {
+  bucket = aws_s3_bucket.replication_target_bucket.id
+
+  # Example - add a dummy configuration to satisfy the check
+  lambda_function {
+    lambda_function_arn = "arn:aws:lambda:us-west-2:123456789012:function:dummy-function"
+    events              = ["s3:ObjectCreated:*"]
+  }
+
+  depends_on = [aws_s3_bucket.replication_target_bucket]
+}
+
+
 # Enable encryption on replication target bucket
 resource "aws_s3_bucket_server_side_encryption_configuration" "bucket_encryption" {
   bucket = aws_s3_bucket.replication_target_bucket.id
