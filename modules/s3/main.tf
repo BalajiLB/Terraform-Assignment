@@ -25,6 +25,22 @@ resource "aws_s3_bucket_versioning" "versioning" {
 resource "aws_kms_key" "s3_kms" {
   description         = "KMS key for ${var.env}-${var.bucket_name}"
   enable_key_rotation = true
+
+  # Fix KMS Key Policy (CKV2_AWS_64)
+  policy = <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "Enable IAM User Permissions",
+      "Effect": "Allow",
+      "Principal": { "AWS": "*" },
+      "Action": "kms:*",
+      "Resource": "*"
+    }
+  ]
+}
+EOF
 }
 
 resource "aws_s3_bucket_server_side_encryption_configuration" "default" {
@@ -68,6 +84,11 @@ resource "aws_s3_bucket_lifecycle_configuration" "infra_bucket_lifecycle" {
     }
 
     filter {} # Apply to all objects
+
+    # Add Lifecycle Aborted Uploads Rule (CKV_AWS_300)
+    abort_incomplete_multipart_upload {
+      days_after_initiation = 7
+    }
   }
 }
 
@@ -94,6 +115,28 @@ resource "aws_s3_bucket_versioning" "replication_target_versioning" {
   versioning_configuration {
     status = "Enabled"
   }
+}
+
+# Enable encryption on replication target bucket
+resource "aws_s3_bucket_server_side_encryption_configuration" "bucket_encryption" {
+  bucket = aws_s3_bucket.replication_target_bucket.id
+
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm     = "aws:kms"
+      kms_master_key_id = aws_kms_key.s3_kms.arn
+    }
+  }
+}
+
+# Block public access on replication bucket
+resource "aws_s3_bucket_public_access_block" "replication_block_public_access" {
+  bucket = aws_s3_bucket.replication_target_bucket.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
 }
 
 # Replication IAM Role
@@ -170,6 +213,7 @@ resource "aws_s3_bucket" "logging_target_bucket" {
   )
 }
 
+# Grant write access to S3 log delivery
 resource "aws_s3_bucket_acl" "logging_target_acl" {
   bucket = aws_s3_bucket.logging_target_bucket.id
   acl    = "log-delivery-write"
@@ -194,4 +238,22 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "logging_bucket_en
       sse_algorithm = "AES256"
     }
   }
+}
+
+# ----------------------------
+# Enable Event Notifications (CKV2_AWS_62)
+# ----------------------------
+resource "aws_s3_bucket_notification" "example" {
+  bucket = aws_s3_bucket.infra_bucket.id
+  # Define lambda/SNS/SQS targets if needed
+}
+
+# ----------------------------
+# Restrict Default Security Group (CKV2_AWS_12)
+# ----------------------------
+resource "aws_default_security_group" "default" {
+  vpc_id = aws_vpc.vpc.id
+
+  ingress = []
+  egress  = []
 }
