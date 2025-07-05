@@ -1,4 +1,4 @@
-name: Terraform Deploy
+iname: Terraform Deploy
 
 on:
   push:
@@ -41,6 +41,7 @@ jobs:
         uses: bridgecrewio/checkov-action@master
         with:
           directory: .   # Scans envs/dev, checkov.yml is auto-detected from root
+   soft-fail: ${{ github.event_name != 'push' }}  # Hard fail on push
 
       - name: Terraform Plan
         run: terraform plan -var-file="terraform.tfvars"
