@@ -1,3 +1,5 @@
+data "aws_caller_identity" "current" {}
+
 # ----------------------------
 # Infra (Main) S3 Bucket
 # ----------------------------
@@ -26,23 +28,22 @@ resource "aws_kms_key" "s3_kms" {
   description         = "KMS key for ${var.env}-${var.bucket_name}"
   enable_key_rotation = true
 
-  # Fix KMS Key Policy (CKV2_AWS_64)
   policy = <<EOF
 {
   "Version": "2012-10-17",
   "Statement": [
     {
-      "Sid": "Enable IAM User Permissions",
+      "Sid": "AllowAccountRoot",
       "Effect": "Allow",
-      "Principal": { { "AWS": "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root" }, },
+      "Principal": { "AWS": "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root" },
       "Action": "kms:*",
       "Resource": "*"
     }
   ]
 }
 EOF
-
 }
+
 
 resource "aws_s3_bucket_server_side_encryption_configuration" "default" {
   bucket = aws_s3_bucket.infra_bucket.id
