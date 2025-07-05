@@ -103,5 +103,6 @@ module "s3" {
   bucket_name                = var.bucket_name
   replication_target_bucket  = var.replication_target_bucket
   logging_target_bucket      = var.logging_target_bucket
-  tags                        = var.tags
+  tags                       = var.tags
+  vpc_id                     = module.vpc.vpc_id
 }

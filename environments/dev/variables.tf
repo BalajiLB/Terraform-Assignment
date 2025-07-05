@@ -114,8 +114,3 @@ variable "tags" {
   description = "Common tags applied to all resources"
   type        = map(string)
 }
-
-variable "vpc_id" {
-  description = "VPC ID where the default security group belongs"
-  type        = string
-}

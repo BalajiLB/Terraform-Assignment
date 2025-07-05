@@ -252,7 +252,7 @@ resource "aws_s3_bucket_notification" "example" {
 # Restrict Default Security Group (CKV2_AWS_12)
 # ----------------------------
 resource "aws_default_security_group" "default" {
-  vpc_id = aws_vpc.vpc.id
+  vpc_id = var.vpc_id
 
   ingress = []
   egress  = []
