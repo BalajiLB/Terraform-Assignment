@@ -89,9 +89,12 @@ module "ec2" {
 
 
 #s3 module
+
 module "s3" {
-  source      = "../../modules/s3"
-  env         = var.env
-  bucket_name = var.bucket_name
-  tags        = var.tags
+  source                     = "../../modules/s3"
+  env                        = var.env
+  bucket_name                = var.bucket_name
+  replication_target_bucket  = var.replication_target_bucket
+  logging_target_bucket      = var.logging_target_bucket
+  tags                        = var.tags
 }

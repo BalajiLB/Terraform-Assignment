@@ -1,3 +1,6 @@
+# ----------------------------
+# Infra (Main) S3 Bucket
+# ----------------------------
 resource "aws_s3_bucket" "infra_bucket" {
   bucket = "${var.env}-${var.bucket_name}"
 
@@ -9,6 +12,7 @@ resource "aws_s3_bucket" "infra_bucket" {
   )
 }
 
+# Enable versioning
 resource "aws_s3_bucket_versioning" "versioning" {
   bucket = aws_s3_bucket.infra_bucket.id
 
@@ -17,17 +21,24 @@ resource "aws_s3_bucket_versioning" "versioning" {
   }
 }
 
-# Add server-side encryption
+# Server-side encryption with KMS
+resource "aws_kms_key" "s3_kms" {
+  description         = "KMS key for ${var.env}-${var.bucket_name}"
+  enable_key_rotation = true
+}
+
 resource "aws_s3_bucket_server_side_encryption_configuration" "default" {
   bucket = aws_s3_bucket.infra_bucket.id
 
   rule {
     apply_server_side_encryption_by_default {
-      sse_algorithm = "AES256"
+      sse_algorithm     = "aws:kms"
+      kms_master_key_id = aws_kms_key.s3_kms.arn
     }
   }
 }
 
+# Block public access
 resource "aws_s3_bucket_public_access_block" "block_public_access" {
   bucket = aws_s3_bucket.infra_bucket.id
 
@@ -37,3 +48,150 @@ resource "aws_s3_bucket_public_access_block" "block_public_access" {
   restrict_public_buckets = true
 }
 
+# Enable logging
+resource "aws_s3_bucket_logging" "logging" {
+  bucket        = aws_s3_bucket.infra_bucket.id
+  target_bucket = aws_s3_bucket.logging_target_bucket.id
+  target_prefix = "${var.env}/logs/"
+}
+
+# Lifecycle rule
+resource "aws_s3_bucket_lifecycle_configuration" "infra_bucket_lifecycle" {
+  bucket = aws_s3_bucket.infra_bucket.id
+
+  rule {
+    id     = "expire-old-objects"
+    status = "Enabled"
+
+    expiration {
+      days = 365
+    }
+
+    filter {} # Apply to all objects
+  }
+}
+
+# ----------------------------
+# Replication Setup
+# ----------------------------
+
+# Target bucket for replication
+resource "aws_s3_bucket" "replication_target_bucket" {
+  bucket = var.replication_target_bucket
+
+  tags = merge(
+    var.tags,
+    {
+      Name = var.replication_target_bucket
+    }
+  )
+}
+
+# Enable versioning on the target bucket
+resource "aws_s3_bucket_versioning" "replication_target_versioning" {
+  bucket = aws_s3_bucket.replication_target_bucket.id
+
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
+# Replication IAM Role
+resource "aws_iam_role" "replication_role" {
+  name = "${var.env}-s3-replication-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [{
+      Effect = "Allow",
+      Principal = {
+        Service = "s3.amazonaws.com"
+      },
+      Action = "sts:AssumeRole"
+    }]
+  })
+}
+
+# Attach replication permissions to the role
+resource "aws_iam_role_policy" "replication_policy" {
+  role = aws_iam_role.replication_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Effect   = "Allow",
+        Action   = ["s3:GetReplicationConfiguration", "s3:ListBucket"],
+        Resource = [aws_s3_bucket.infra_bucket.arn]
+      },
+      {
+        Effect   = "Allow",
+        Action   = ["s3:GetObjectVersion", "s3:GetObjectVersionAcl", "s3:GetObjectVersionTagging"],
+        Resource = ["${aws_s3_bucket.infra_bucket.arn}/*"]
+      },
+      {
+        Effect   = "Allow",
+        Action   = ["s3:ReplicateObject", "s3:ReplicateDelete", "s3:ReplicateTags"],
+        Resource = ["${aws_s3_bucket.replication_target_bucket.arn}/*"]
+      }
+    ]
+  })
+}
+
+# Replication configuration
+resource "aws_s3_bucket_replication_configuration" "infra_replication" {
+  bucket = aws_s3_bucket.infra_bucket.id
+  role   = aws_iam_role.replication_role.arn
+
+  rule {
+    id     = "replicate-all"
+    status = "Enabled"
+
+    destination {
+      bucket        = aws_s3_bucket.replication_target_bucket.arn
+      storage_class = "STANDARD"
+    }
+
+    filter {} # replicate all objects
+  }
+}
+
+# ----------------------------
+# Logging Target Bucket
+# ----------------------------
+resource "aws_s3_bucket" "logging_target_bucket" {
+  bucket = var.logging_target_bucket
+
+  tags = merge(
+    var.tags,
+    {
+      Name = var.logging_target_bucket
+    }
+  )
+}
+
+resource "aws_s3_bucket_acl" "logging_target_acl" {
+  bucket = aws_s3_bucket.logging_target_bucket.id
+  acl    = "log-delivery-write"
+}
+
+# Block public access on logging bucket
+resource "aws_s3_bucket_public_access_block" "logging_block_public_access" {
+  bucket = aws_s3_bucket.logging_target_bucket.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+# Enable encryption on logging bucket
+resource "aws_s3_bucket_server_side_encryption_configuration" "logging_bucket_encryption" {
+  bucket = aws_s3_bucket.logging_target_bucket.id
+
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "AES256"
+    }
+  }
+}

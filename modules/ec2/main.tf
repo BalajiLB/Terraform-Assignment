@@ -32,6 +32,12 @@ resource "aws_instance" "ec2" {
   metadata_options {
     http_tokens = "required"
   }
+
+  root_block_device {
+    encrypted = true
+    kms_key_id = aws_kms_key.example.arn
+
+  }
                     
   tags = {
     Name = "${var.env}-ec2-${each.key}"
