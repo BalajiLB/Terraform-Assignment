@@ -51,6 +51,7 @@ module "vpc" {
   aws_region           = var.aws_region
   flow_logs_role_arn   = aws_iam_role.flow_logs_role.arn
 
+
 }
 
 #sg module  
