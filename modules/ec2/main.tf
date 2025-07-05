@@ -35,7 +35,7 @@ resource "aws_instance" "ec2" {
 
   root_block_device {
     encrypted = true
-    kms_key_id = aws_kms_key.example.arn
+    kms_key_id = var.kms_key_arn
 
   }
                     

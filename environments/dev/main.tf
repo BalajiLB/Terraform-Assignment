@@ -37,6 +37,12 @@ resource "aws_iam_role" "ec2_role" {
   assume_role_policy = data.aws_iam_policy_document.ec2_assume_role_policy.json
 }
 
+# KMS Key for EC2 and S3 encryption
+resource "aws_kms_key" "s3_kms" {
+  description         = "KMS key for S3 bucket and EC2 volume encryption"
+  enable_key_rotation = true
+}
+
 
 #vpc module (2-public subnets)
 module "vpc" {
@@ -85,6 +91,7 @@ module "ec2" {
   public_subnet_b_id = module.vpc.public_subnet_b_id
   aws_security_group = module.sg.ec2_sg
   ec2_role_name      = aws_iam_role.ec2_role.name
+  kms_key_arn        = aws_kms_key.s3_kms.arn
 }
 
 

@@ -21,3 +21,7 @@ variable "aws_security_group" {
 variable "ec2_role_name" {
   type = string
 }
+variable "kms_key_arn" {
+  description = "KMS Key ARN for EBS encryption"
+  type        = string
+}
