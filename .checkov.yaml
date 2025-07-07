@@ -1,7 +1,7 @@
 quiet: false
 soft-fail: true
 download-external-modules: true
-output: cli
+output: sarif
 framework:
   - terraform
 skip-check:
