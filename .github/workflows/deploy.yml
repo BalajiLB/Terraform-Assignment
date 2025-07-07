@@ -64,7 +64,7 @@ jobs:
       - name: Upload Checkov SARIF results to GitHub Security tab
         uses: github/codeql-action/upload-sarif@v3
         with:
-          sarif_file: environments/dev/checkov-results/checkov-results.sarif
+          sarif_file: checkov-results/checkov-results.sarif
 
       # Step 9: Generate Terraform plan and save it to a file
       - name: Terraform Plan
