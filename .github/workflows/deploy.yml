@@ -104,6 +104,7 @@ jobs:
           path: checkov-results/checkov-results.sarif
           retention-days: 3
 
+          
       # Step 11: Apply Terraform changes (only on manual trigger)
       - name: Terraform Apply (manual approval)
         if: github.event_name == 'workflow_dispatch'  # Only apply when manually triggered
