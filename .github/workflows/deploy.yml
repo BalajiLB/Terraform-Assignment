@@ -65,15 +65,15 @@ jobs:
 
       # Step 4: Initialize Terraform
       - name: Terraform Init
-        run: terraform init -reconfigure
+        run: terraform init -reconfigure -no-color
 
       # Step 5: Check Terraform code formatting
       - name: Terraform Format Check
-        run: terraform fmt -check -recursive .
+        run: terraform fmt -check -recursive 
 
       # Step 6: Validate Terraform configuration
       - name: Terraform Validate
-        run: terraform validate
+        run: terraform validate -no-color
 
       # Step 7: Run Checkov security scan
       - name: Run Checkov Security Scan
@@ -93,7 +93,7 @@ jobs:
 
       # Step 9: Run Terraform plan and save the output
       - name: Terraform Plan
-        run: terraform plan -out=tfplan.binary
+        run: terraform plan -out=tfplan.binary -no-color
 
       # Step 10: Upload the Checkov scan as an artifact for later download
       - name: Upload Security Report
@@ -104,7 +104,7 @@ jobs:
           path: checkov-results/checkov-results.sarif
           retention-days: 3
 
-          
+
       # Step 11: Apply Terraform changes (only on manual trigger)
       - name: Terraform Apply (manual approval)
         if: github.event_name == 'workflow_dispatch'  # Only apply when manually triggered
