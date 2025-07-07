@@ -55,7 +55,7 @@ jobs:
 
       # Step 6: Terraform Format Check
       - name: Terraform Format Check
-        run: terraform fmt -check -recursive
+        run: find . -type f -name "*.tf" -exec terraform fmt -check {} +
 
       # Step 7: Terraform Validate
       - name: Terraform Validate
