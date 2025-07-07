@@ -1,5 +1,5 @@
 quiet: false
-soft-fail: false
+soft-fail: true
 download-external-modules: true
 output: cli
 framework:

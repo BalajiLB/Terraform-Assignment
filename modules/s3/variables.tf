@@ -28,7 +28,8 @@ variable "vpc_id" {
   type        = string
 }
 
-variable "region" {
-    description = "AWS Region"
-    type = string
+variable "aws_region" {
+  description = "AWS Region"
+  type        = string
 }
+
