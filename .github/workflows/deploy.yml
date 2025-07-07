@@ -1,90 +1,103 @@
-# This workflow deploys Terraform infrastructure and performs security scans using Checkov
 name: Terraform Deploy
 
-# Trigger this workflow on pushes to 'main' branch or manual dispatch
 on:
   push:
     branches:
       - main
   workflow_dispatch:
 
-# Set required permissions for the workflow
 permissions:
-  id-token: write               # For AWS OIDC authentication
-  contents: read                 # To checkout code from the repo
-  security-events: write         # To upload SARIF results to GitHub's Security tab
+  id-token: write
+  contents: read
+  security-events: write  # Required for uploading SARIF to GitHub Security tab
 
 jobs:
   terraform:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: environments/dev  # Default working directory for all steps
+        working-directory: environments/dev
 
     steps:
-      # Step 1: Checkout the repository code
+      # Step 1: Checkout code
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Step 2: Configure AWS credentials using OIDC role assumption
+      # Step 2: Configure AWS credentials via OIDC
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::055714170174:role/github-action-workflow  # IAM role to assume
-          aws-region: us-west-2                                                  # AWS region
-          role-session-name: GitHubActions-${{ github.run_id }}                  # For auditing sessions
+          role-to-assume: arn:aws:iam::055714170174:role/github-action-workflow
+          aws-region: us-west-2
+          role-session-name: GitHubActions-${{ github.run_id }}
 
       # Step 3: Set up Terraform CLI
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v3
 
-      # Step 4: Initialize Terraform with backend reconfiguration
+      # Step 4: Initialize Terraform
       - name: Terraform Init
         run: terraform init -reconfigure
 
-      # Step 5: Check Terraform formatting to ensure code consistency
+      # Step 5: Create terraform.tfvars file
+      - name: Create terraform.tfvars file
+        run: |
+          cat <<EOF > terraform.tfvars
+          env = "dev"
+          aws_region = "us-west-2"
+          bucket_name = "example-bucket"
+          replication_target_bucket = "replication-bucket"
+          logging_target_bucket = "logging-bucket"
+          vpc_cidr = "10.0.0.0/16"
+          public_subnet_a_cidr = "10.0.1.0/24"
+          public_subnet_b_cidr = "10.0.2.0/24"
+          EOF
+
+      # Step 6: Terraform Format Check
       - name: Terraform Format Check
         run: terraform fmt -check -recursive
 
-      # Step 6: Validate Terraform configuration syntax
+      # Step 7: Terraform Validate
       - name: Terraform Validate
         run: terraform validate
 
-      # Step 7: Run Checkov Security Scan using a centralized config file
+      # Step 8: Run Checkov Security Scan using centralized config
       - name: Run Checkov Security Scan
         uses: bridgecrewio/checkov-action@v12
         with:
-          directory: environments/dev                           # scan tf codes here
+          directory: environments/dev                           # Scan this directory
           config-file: .checkov.yml                             # Centralized Checkov config
           output_format: sarif
           output_file_path: checkov-results/checkov-results.sarif
           soft_fail: true                                       # Continue pipeline even on failures
 
-      # Step 8: Upload Checkov SARIF results to GitHub's Security tab
+      # Step 9: Upload Checkov SARIF results to GitHub Security tab
       - name: Upload Checkov SARIF results to GitHub Security tab
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: checkov-results/checkov-results.sarif
 
-      # Step 9: Generate Terraform plan and save it to a file
+      # Step 10: Terraform Plan
       - name: Terraform Plan
         run: terraform plan -var-file="terraform.tfvars" -out=tfplan.binary
 
-      # Step 10: Upload the Checkov scan result as an artifact for reference
+      # Step 11: Upload the Checkov scan result as an artifact for reference
       - name: Upload Security Report
-        if: always()  # Run even if previous steps fail
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: security-report
-          path: environments/dev/checkov-results/checkov-results.sarif
+          path: checkov-results/checkov-results.sarif
           retention-days: 3
 
-      # Step 11: Apply Terraform changes only on manual trigger (workflow_dispatch)
+      # Step 12: Terraform Apply (manual trigger only)
       - name: Terraform Apply (manual approval)
         if: github.event_name == 'workflow_dispatch'
         run: terraform apply -auto-approve tfplan.binary
 
-      # Step 12: Cleanup generated plan file
+      # Step 13: Cleanup Terraform plan files and tfvars
       - name: Cleanup Plan Files
-        if: always()  # Run even if previous steps fail
-        run: rm -f tfplan.binary
+        if: always()
+        run: |
+          rm -f tfplan.binary
+          rm -f terraform.tfvars
