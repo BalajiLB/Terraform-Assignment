@@ -12,7 +12,7 @@ on:
 permissions:
   id-token: write               # For AWS OIDC authentication
   contents: read                 # To checkout code from the repo
-  security-events: write         # Required to upload SARIF results to GitHub's Security tab
+  security-events: write         # To upload SARIF results to GitHub's Security tab
 
 jobs:
   terraform:
@@ -50,21 +50,15 @@ jobs:
       - name: Terraform Validate
         run: terraform validate
 
-      # Step 7: Run Checkov security scan using Docker and centralized config
-      - name: Run Checkov (Docker with config)
-        run: |
-          mkdir -p checkov-results  # Create results directory
-
-          # Mount Terraform code and Checkov config file, run scan, output SARIF
-          docker run --rm \
-            -v ${{ github.workspace }}/environments/dev:/tf \
-            -v ${{ github.workspace }}/.checkov.yml:/checkov/.checkov.yml \
-            bridgecrew/checkov:latest \
-            -d /tf \
-            --config-file /checkov/.checkov.yml \
-            -o sarif \
-            --output-file-path /tf/checkov-results/checkov-results.sarif \
-            --soft-fail
+      # Step 7: Run Checkov Security Scan using a centralized config file
+      - name: Run Checkov Security Scan
+        uses: bridgecrewio/checkov-action@v12
+        with:
+          directory: .
+          config-file: .checkov.yml                             # Centralized Checkov config
+          output_format: sarif
+          output_file_path: checkov-results/checkov-results.sarif
+          soft_fail: true                                       # Continue pipeline even on failures
 
       # Step 8: Upload Checkov SARIF results to GitHub's Security tab
       - name: Upload Checkov SARIF results to GitHub Security tab
