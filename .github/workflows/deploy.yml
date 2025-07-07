@@ -93,7 +93,7 @@ jobs:
 
       # Step 9: Run Terraform plan and save the output
       - name: Terraform Plan
-        run: terraform plan -out=tfplan.binary -no-color || echo "Terraform plan failed with exit code $?"
+        run: terraform plan -out=tfplan.binary -no-color -lock-timeout=30s
 
       # Step 10: Upload the Checkov scan as an artifact for later download
       - name: Upload Security Report
