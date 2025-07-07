@@ -1,4 +1,4 @@
-quiet: false
+quiet: true
 soft-fail: true
 download-external-modules: true
 output: sarif
