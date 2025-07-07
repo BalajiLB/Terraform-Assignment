@@ -57,7 +57,7 @@ jobs:
           directory: environments/dev                           # scan tf codes here
           config-file: .checkov.yml                             # Centralized Checkov config
           output_format: sarif
-          output_file_path: results.sarif
+          output_file_path: checkov-results/checkov-results.sarif
           soft_fail: true                                       # Continue pipeline even on failures
 
       # Step 8: Upload Checkov SARIF results to GitHub's Security tab
