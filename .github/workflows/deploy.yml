@@ -50,19 +50,21 @@ jobs:
       - name: Terraform Validate
         run: terraform validate
 
-      # Step 7: Run Checkov security scan using Docker with a centralized config file
+      # Step 7: Run Checkov security scan using Docker and centralized config
       - name: Run Checkov (Docker with config)
         run: |
-          mkdir -p checkov-results  # Create output directory for scan results
+          mkdir -p checkov-results  # Create results directory
+
+          # Mount Terraform code and Checkov config file, run scan, output SARIF
           docker run --rm \
-            -v ${{ github.workspace }}/environments/dev:/tf \                          # Mount Terraform code
-            -v ${{ github.workspace }}/.checkov.yml:/checkov/.checkov.yml \           # Mount Checkov config file
-            bridgecrew/checkov:latest \                                                # Use latest Checkov image
-            -d /tf \                                                                  # Directory to scan
-            --config-file /checkov/.checkov.yml \                                     # Use centralized config
-            -o sarif \                                                                # SARIF output format
-            --output-file-path /tf/checkov-results/checkov-results.sarif \            # Save output file
-            --soft-fail                                                               # Don't fail the pipeline on violations
+            -v ${{ github.workspace }}/environments/dev:/tf \
+            -v ${{ github.workspace }}/.checkov.yml:/checkov/.checkov.yml \
+            bridgecrew/checkov:latest \
+            -d /tf \
+            --config-file /checkov/.checkov.yml \
+            -o sarif \
+            --output-file-path /tf/checkov-results/checkov-results.sarif \
+            --soft-fail
 
       # Step 8: Upload Checkov SARIF results to GitHub's Security tab
       - name: Upload Checkov SARIF results to GitHub Security tab
