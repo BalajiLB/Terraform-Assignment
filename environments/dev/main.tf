@@ -105,5 +105,5 @@ module "s3" {
   logging_target_bucket      = var.logging_target_bucket
   tags                       = var.tags
   vpc_id                     = module.vpc.vpc_id
-  region                     = var.aws_region
+  aws_region              = var.aws_region
 }
