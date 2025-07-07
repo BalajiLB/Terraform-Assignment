@@ -41,7 +41,7 @@ jobs:
         uses: bridgecrewio/checkov-action@master
         with:
           directory: .
-          config-file: ${{ github.workspace }}/checkov.yml  # Explicit path added
+          config-file: ${{ github.workspace }}/.checkov.yml  # Explicit path added
           soft_fail: ${{ github.event_name != 'push' }}  # Fixed indentation
           output_format: sarif  # Added for reporting
           quiet: true  # Added to reduce log noise

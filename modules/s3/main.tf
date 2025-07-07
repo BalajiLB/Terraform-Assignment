@@ -191,17 +191,6 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "bucket_encryption
   }
 }
 
-# Update the encryption configuration
-resource "aws_s3_bucket_server_side_encryption_configuration" "logging_bucket_encryption" {
-  bucket = aws_s3_bucket.logging_target_bucket.id
-
-  rule {
-    apply_server_side_encryption_by_default {
-      sse_algorithm     = "aws:kms"  # Changed from AES256
-      kms_master_key_id = aws_kms_key.s3_kms.arn
-    }
-  }
-}
 
 # replication_target_bucket
 resource "aws_s3_bucket_lifecycle_configuration" "replication_target_lifecycle" {
@@ -345,10 +334,16 @@ resource "aws_s3_bucket_logging" "replication_target_logging" {
 # ----------------------------
 # Enable Event Notifications (CKV2_AWS_62)
 # ----------------------------
-resource "aws_s3_bucket_notification" "example" {
+
+resource "aws_s3_bucket_notification" "infra_notification" {
   bucket = aws_s3_bucket.infra_bucket.id
-  # Define lambda/SNS/SQS targets if needed
+
+  topic {
+    topic_arn = "arn:aws:sns:${var.region}:${data.aws_caller_identity.current.account_id}:dummy-topic"
+    events    = ["s3:ObjectCreated:*"]
+  }
 }
+
 
 # ----------------------------
 # Restrict Default Security Group (CKV2_AWS_12)

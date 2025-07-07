@@ -15,8 +15,10 @@ variable "public_subnet_b_id" {
 }
 
 variable "security_group_ids" {
-  type = list(string)
+  description = "Security group IDs to associate with EC2 instances"
+  type        = list(string)
 }
+
 
 variable "ec2_role_name" {
   type = string

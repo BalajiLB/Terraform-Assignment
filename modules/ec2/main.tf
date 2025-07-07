@@ -31,7 +31,7 @@ resource "aws_instance" "ec2" {
   instance_type          = var.instance_type
   subnet_id              = each.value.subnet_id
   vpc_security_group_ids = var.security_group_ids
-  # Correctly referencing the security group from your module
+  # Correctly referencing the security group from the module
 
   iam_instance_profile   = aws_iam_instance_profile.ec2_profile.name 
   user_data              = file("${path.root}/../../scripts/userdata.sh")
