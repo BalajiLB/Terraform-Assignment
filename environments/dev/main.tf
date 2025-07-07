@@ -1,6 +1,6 @@
 
 provider "aws" {
-  region = var.aws_region 
+  region = var.aws_region
 }
 
 # VPC Flow Logs Role
@@ -15,7 +15,7 @@ data "aws_iam_policy_document" "flow_logs_assume_role_policy" {
 }
 
 resource "aws_iam_role" "flow_logs_role" {
-  name = "${var.env}-vpc-flow-logs-role"
+  name               = "${var.env}-vpc-flow-logs-role"
   assume_role_policy = data.aws_iam_policy_document.flow_logs_assume_role_policy.json
 }
 
@@ -33,7 +33,7 @@ data "aws_iam_policy_document" "ec2_assume_role_policy" {
 }
 
 resource "aws_iam_role" "ec2_role" {
-  name = "${var.env}-ec2-role"
+  name               = "${var.env}-ec2-role"
   assume_role_policy = data.aws_iam_policy_document.ec2_assume_role_policy.json
 }
 
@@ -98,12 +98,12 @@ module "ec2" {
 #s3 module
 
 module "s3" {
-  source                     = "../../modules/s3"
-  env                        = var.env
-  bucket_name                = var.bucket_name
-  replication_target_bucket  = var.replication_target_bucket
-  logging_target_bucket      = var.logging_target_bucket
-  tags                       = var.tags
-  vpc_id                     = module.vpc.vpc_id
-  aws_region              = var.aws_region
+  source                    = "../../modules/s3"
+  env                       = var.env
+  bucket_name               = var.bucket_name
+  replication_target_bucket = var.replication_target_bucket
+  logging_target_bucket     = var.logging_target_bucket
+  tags                      = var.tags
+  vpc_id                    = module.vpc.vpc_id
+  aws_region                = var.aws_region
 }
