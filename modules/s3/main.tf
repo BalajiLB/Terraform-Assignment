@@ -174,7 +174,7 @@ resource "aws_s3_bucket_notification" "logging_notification" {
   
   # Add at least one notification type
   topic {
-    topic_arn = "arn:aws:sns:${var.region}:${data.aws_caller_identity.current.account_id}:dummy-topic"
+    topic_arn = "arn:aws:sns:${var.aws_region}:${data.aws_caller_identity.current.account_id}:dummy-topic"
     events    = ["s3:ObjectCreated:*"]
   }
 }
@@ -339,7 +339,7 @@ resource "aws_s3_bucket_notification" "infra_notification" {
   bucket = aws_s3_bucket.infra_bucket.id
 
   topic {
-    topic_arn = "arn:aws:sns:${var.region}:${data.aws_caller_identity.current.account_id}:dummy-topic"
+    topic_arn = "arn:aws:sns:${var.aws_region}:${data.aws_caller_identity.current.account_id}:dummy-topic"
     events    = ["s3:ObjectCreated:*"]
   }
 }
