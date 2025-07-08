@@ -303,6 +303,11 @@ resource "aws_s3_bucket_replication_configuration" "infra_replication" {
         replica_kms_key_id = aws_kms_key.s3_kms.arn
       }
     }
+    source_selection_criteria {
+      sse_kms_encrypted_objects {
+        status = "Enabled"
+      }
+    }
 
     filter {
       prefix = ""
