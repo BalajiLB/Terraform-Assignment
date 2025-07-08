@@ -281,30 +281,27 @@ resource "aws_iam_role_policy" "replication_policy" {
 resource "aws_s3_bucket_replication_configuration" "infra_replication" {
   bucket = aws_s3_bucket.infra_bucket.id
   role   = aws_iam_role.replication_role.arn
+  depends_on = [
+    aws_s3_bucket_versioning.replication_target_versioning,
+    aws_s3_bucket_versioning.versioning
+  ]
 
   rule {
-  status = "Enabled"
-  
-  delete_marker_replication {
-    status = "Disabled"
+    status = "Enabled"
+
+    delete_marker_replication {
+      status = "Disabled"
+    }
+
+    destination {
+      bucket        = aws_s3_bucket.replication_target_bucket.arn
+      storage_class = "STANDARD"
+    }
+
+    filter {
+      prefix = ""
+    }
   }
-
-  destination {
-    bucket        = "arn:aws:s3:::destination-bucket"
-    storage_class = "STANDARD"
-  }
-
-  filter {
-    prefix = ""
-  }
-}
-
-}
-
-# ACL for logging bucket (log delivery write)
-resource "aws_s3_bucket_acl" "logging_target_acl" {
-  bucket = aws_s3_bucket.logging_target_bucket.id
-  acl    = "log-delivery-write"
 }
 
 # Block public access on logging bucket
