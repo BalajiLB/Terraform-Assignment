@@ -283,16 +283,22 @@ resource "aws_s3_bucket_replication_configuration" "infra_replication" {
   role   = aws_iam_role.replication_role.arn
 
   rule {
-    id     = "replicate-all"
-    status = "Enabled"
-
-    destination {
-      bucket        = aws_s3_bucket.replication_target_bucket.arn
-      storage_class = "STANDARD"
-    }
-
-    filter {}
+  status = "Enabled"
+  
+  delete_marker_replication {
+    status = "Disabled"
   }
+
+  destination {
+    bucket        = "arn:aws:s3:::destination-bucket"
+    storage_class = "STANDARD"
+  }
+
+  filter {
+    prefix = ""
+  }
+}
+
 }
 
 # ACL for logging bucket (log delivery write)
