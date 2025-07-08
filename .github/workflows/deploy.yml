@@ -1,27 +1,23 @@
-name: Terraform Deploy  # Name of the GitHub Actions workflow
+name: Terraform Deploy
 
-# When to trigger the workflow
 on:
   push:
     branches:
-      - main               # Trigger automatically when code is pushed to main
-  workflow_dispatch:        # Allow manual execution from the GitHub UI
+      - main
+  workflow_dispatch:
 
-# Set required permissions for this workflow
 permissions:
-  id-token: write           # Needed for AWS OIDC authentication
-  contents: read            # Allow reading repo contents
-  security-events: write    # Allow uploading SARIF security scan results
+  id-token: write
+  contents: read
+  security-events: write
 
-# Define the job
 jobs:
   terraform:
-    runs-on: ubuntu-latest  # Use latest Ubuntu runner
+    runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: environments/dev  # Set default working directory for Terraform
+        working-directory: environments/dev
 
-    # Load all Terraform variables from GitHub Environment Secrets
     env:
       TF_VAR_env: ${{ secrets.TF_VAR_env }}
       TF_VAR_aws_region: ${{ secrets.TF_VAR_aws_region }}
@@ -45,14 +41,11 @@ jobs:
       TF_VAR_egress_to_port: ${{ secrets.TF_VAR_egress_to_port }}
       TF_VAR_egress_protocol: ${{ secrets.TF_VAR_egress_protocol }}
       TF_VAR_egress_cidr_blocks: ${{ secrets.TF_VAR_egress_cidr_blocks }}
-      TF_VAR_tags: '{"Environment":"dev","Owner":"logabalaji","Project":"my-project"}'
 
     steps:
-      # Step 1: Checkout the source code
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Step 2: Authenticate with AWS using OpenID Connect (OIDC)
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -60,11 +53,11 @@ jobs:
           aws-region: us-west-2
           role-session-name: GitHubActions-${{ github.run_id }}
 
-      # Step 3: Install Terraform CLI
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.8.5
 
-      # Step: Debug AWS Caller Identity & Region
       - name: Check AWS Identity & Region
         run: |
           echo "Caller Identity:"
@@ -76,61 +69,48 @@ jobs:
           echo "List Lock Table Items:"
           aws dynamodb scan --table-name terraform-locks
 
-
-      # Step: List EC2 AMIs (optional, to test describe permissions)
       - name: Test EC2 DescribeImages Permission
         run: |
           aws ec2 describe-images --owners amazon --filters "Name=name,Values=amzn2-ami-hvm-*-x86_64-gp2" --query "Images[0].ImageId"
 
-
-      # Step 4: Initialize Terraform
       - name: Terraform Init
         run: terraform init -reconfigure -no-color
 
-      # Step 5: Check Terraform code formatting
       - name: Terraform Format Check
-        run: terraform fmt -check -recursive 
+        run: terraform fmt -check -recursive
 
-      # Step 6: Validate Terraform configuration
       - name: Terraform Validate
         run: terraform validate -no-color
 
-      # Step 7: Run Checkov security scan
       - name: Run Checkov Security Scan
         uses: bridgecrewio/checkov-action@v12
         with:
-          directory: environments/dev            # Scan this directory
-          config-file: .checkov.yml              # Use this config file
+          directory: environments/dev
+          config-file: .checkov.yml
           output_format: sarif
           output_file_path: checkov-results/checkov-results.sarif
-          soft_fail: true                        # Don't fail the workflow on Checkov issues
+          soft_fail: true
 
-      # Step 8: Upload Checkov SARIF scan results to the GitHub Security tab
       - name: Upload Checkov SARIF results to GitHub Security tab
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: checkov-results/checkov-results.sarif
 
-      # Step 9: Run Terraform plan and save the output
       - name: Terraform Plan
         run: TF_LOG=DEBUG terraform plan -out=tfplan.binary -no-color -lock-timeout=300s
 
-
-      # Step 10: Upload the Checkov scan as an artifact for later download
       - name: Upload Security Report
-        if: always()  # Run this step even if the previous ones fail
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: security-report
           path: checkov-results/checkov-results.sarif
           retention-days: 3
 
-      # Step 11: Apply Terraform changes (only on manual trigger)
       - name: Terraform Apply (manual approval)
-        if: github.event_name == 'workflow_dispatch'  # Only apply when manually triggered
+        if: github.event_name == 'workflow_dispatch'
         run: terraform apply -auto-approve tfplan.binary
 
-      # Step 12: Clean up the generated Terraform plan file
       - name: Cleanup Plan Files
-        if: always()  # Always clean up even if the workflow failed
+        if: always()
         run: rm -f tfplan.binary
