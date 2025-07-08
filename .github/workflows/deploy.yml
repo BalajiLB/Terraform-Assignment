@@ -63,13 +63,18 @@ jobs:
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v3
 
-            # Step: Debug AWS Caller Identity & Region
+      # Step: Debug AWS Caller Identity & Region
       - name: Check AWS Identity & Region
         run: |
-          echo "Checking AWS Caller Identity..."
+          echo "Caller Identity:"
           aws sts get-caller-identity
-          echo "Checking configured AWS Region..."
-          aws configure get region
+
+          echo "Describe Lock Table:"
+          aws dynamodb describe-table --table-name terraform-locks
+
+          echo "List Lock Table Items:"
+          aws dynamodb scan --table-name terraform-locks
+
 
       # Step: List EC2 AMIs (optional, to test describe permissions)
       - name: Test EC2 DescribeImages Permission
