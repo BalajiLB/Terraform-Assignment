@@ -31,6 +31,8 @@ resource "aws_instance" "ec2" {
   instance_type          = var.instance_type
   subnet_id              = each.value.subnet_id
   vpc_security_group_ids = var.security_group_ids
+  associate_public_ip_address = true
+
   # Correctly referencing the security group from the module
 
   iam_instance_profile   = aws_iam_instance_profile.ec2_profile.name 
