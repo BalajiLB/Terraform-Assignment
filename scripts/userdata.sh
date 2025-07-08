@@ -18,4 +18,4 @@ systemctl start docker
 usermod -aG docker ec2-user
 
 # Optional: Create a sample HTML page
-echo "<h1>Deployed via User Data on $(hostname)</h1>" > /usr/share/nginx/html/index.html
+#echo "<h1>Deployed via User Data on $(hostname)</h1>" > /usr/share/nginx/html/index.html
