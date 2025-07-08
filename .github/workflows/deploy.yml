@@ -45,6 +45,7 @@ jobs:
       TF_VAR_egress_to_port: ${{ secrets.TF_VAR_egress_to_port }}
       TF_VAR_egress_protocol: ${{ secrets.TF_VAR_egress_protocol }}
       TF_VAR_egress_cidr_blocks: ${{ secrets.TF_VAR_egress_cidr_blocks }}
+      TF_VAR_tags: '{"Environment":"dev","Owner":"logabalaji","Project":"my-project"}'
 
     steps:
       # Step 1: Checkout the source code
