@@ -44,9 +44,7 @@ resource "aws_s3_bucket_versioning" "logging_versioning" {
   }
 }
 
-# ----------------------------
-# KMS Key for Encryption
-# ----------------------------
+# KMS Key for S3 Bucket
 resource "aws_kms_key" "s3_kms" {
   description         = "KMS key for ${var.env}-${var.bucket_name}"
   enable_key_rotation = true
@@ -82,21 +80,24 @@ resource "aws_kms_key" "s3_kms" {
             "aws:SourceAccount" = data.aws_caller_identity.current.account_id
           }
         }
+      },
+      {
+        Sid    = "AllowS3ReplicationRole",
+        Effect = "Allow",
+        Principal = {
+          AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/dev-s3-replication-role"
+        },
+        Action = [
+          "kms:Encrypt",
+          "kms:Decrypt",
+          "kms:ReEncrypt*",
+          "kms:GenerateDataKey*",
+          "kms:DescribeKey"
+        ],
+        Resource = "*"
       }
     ]
   })
-}
-
-# Encrypt the Infra bucket with the KMS key
-resource "aws_s3_bucket_server_side_encryption_configuration" "default" {
-  bucket = aws_s3_bucket.infra_bucket.id
-
-  rule {
-    apply_server_side_encryption_by_default {
-      sse_algorithm     = "aws:kms"
-      kms_master_key_id = aws_kms_key.s3_kms.arn
-    }
-  }
 }
 
 # Block public access on the Infra bucket
@@ -281,6 +282,7 @@ resource "aws_iam_role_policy" "replication_policy" {
 resource "aws_s3_bucket_replication_configuration" "infra_replication" {
   bucket = aws_s3_bucket.infra_bucket.id
   role   = aws_iam_role.replication_role.arn
+
   depends_on = [
     aws_s3_bucket_versioning.replication_target_versioning,
     aws_s3_bucket_versioning.versioning
@@ -296,6 +298,10 @@ resource "aws_s3_bucket_replication_configuration" "infra_replication" {
     destination {
       bucket        = aws_s3_bucket.replication_target_bucket.arn
       storage_class = "STANDARD"
+
+      encryption_configuration {
+        replica_kms_key_id = aws_kms_key.s3_kms.arn
+      }
     }
 
     filter {

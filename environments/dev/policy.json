@@ -1,0 +1,17 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "AllowFullAccess",
+      "Effect": "Allow",
+      "Principal": {
+        "AWS": "arn:aws:iam::055714170174:root"
+      },
+      "Action": "s3:*",
+      "Resource": [
+        "arn:aws:s3:::dev-dev-infra-bucket-zb18jt",
+        "arn:aws:s3:::dev-dev-infra-bucket-zb18jt/*"
+      ]
+    }
+  ]
+}
