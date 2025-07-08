@@ -1,52 +1,79 @@
-# This workflow will destroy your Terraform-managed infrastructure.
-# ✅ Recommended to trigger this workflow manually (workflow_dispatch) to avoid accidental destruction.
+# ------------------------------------------------------------------------------------
+# ✅ Terraform Destroy Workflow for GitHub Actions
+# This workflow destroys all Terraform-managed infrastructure in the specified environment.
+# ⚠️ Run this workflow manually using the GitHub Actions UI to avoid accidental deletion.
+# ------------------------------------------------------------------------------------
 
-name: Terraform Destroy  # Workflow name visible in the Actions tab
+name: Terraform Destroy  # Name shown in the GitHub Actions UI
 
-# Trigger only manually from the GitHub Actions UI
+# --------------------------------------
+# ✅ Trigger type: Manual only
+# --------------------------------------
 on:
-  workflow_dispatch:
+  workflow_dispatch:  # Allows manual trigger from the GitHub Actions "Run workflow" button
 
-# Set required permissions for the workflow
+# --------------------------------------
+# ✅ Set workflow permissions
+# --------------------------------------
 permissions:
-  id-token: write           # Needed for AWS OIDC authentication
-  contents: read            # Required to checkout the repo
+  id-token: write     # Required for AWS OIDC authentication
+  contents: read      # Required to checkout the code from the repository
 
-# Define the destroy job
+# --------------------------------------
+# ✅ Define the destroy job
+# --------------------------------------
 jobs:
   terraform-destroy:
-    runs-on: ubuntu-latest  # Run on the latest Ubuntu GitHub-hosted runner
+    runs-on: ubuntu-latest  # Use the latest Ubuntu GitHub-hosted runner
 
-    # Default working directory (where your Terraform files are present)
+    # Set the default working directory for all 'run' steps
     defaults:
       run:
-        working-directory: environments/dev
+        working-directory: environments/dev  # Path where your Terraform files are located
 
     steps:
+      # --------------------------------------
       # Step 1: Checkout the repository code
+      # --------------------------------------
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Step 2: Authenticate with AWS using OIDC (secure temporary credentials)
+      # --------------------------------------
+      # Step 2: Authenticate with AWS using OIDC
+      # --------------------------------------
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::055714170174:role/github-action-workflow  # Replace with your IAM Role ARN
-          aws-region: us-west-2                                                   # Replace with your AWS Region
+          role-to-assume: arn:aws:iam::055714170174:role/github-action-workflow  # 🔑 Replace with your AWS IAM Role ARN
+          aws-region: us-west-2                                                   # 🌎 AWS Region where your infra is deployed
 
-      # Step 3: Install the Terraform CLI
+      # --------------------------------------
+      # Step 3: Install Terraform CLI
+      # --------------------------------------
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v3
 
-      # Step 4: Initialize Terraform and download the state backend (DynamoDB/S3) configuration
+      # --------------------------------------
+      # Step 4: Initialize Terraform (downloads providers, reads backend config)
+      # --------------------------------------
       - name: Terraform Init
         run: terraform init -reconfigure -no-color
 
-      # Step 5: (Optional) Show what Terraform will destroy
+      # --------------------------------------
+      # Step 5: Preview what resources would be destroyed (safe preview)
+      # --------------------------------------
       - name: Terraform Plan Destroy
         run: terraform plan -destroy -var-file="terraform.tfvars" -no-color -lock-timeout=30s
 
-      # Step 6: Destroy the Terraform resources
-      # ⚠️ This step performs the actual destroy. Keep it only for authorized manual triggers!
-      - name: Terraform Destroy (manual approval)
+      # --------------------------------------
+      # Step 6: Destroy infrastructure (⚠️ irreversible operation)
+      # --------------------------------------
+      - name: Confirm destroy operation
+        run: echo "🚨 Destroying all Terraform-managed infrastructure in environments/dev"
+
+      - name: Terraform Destroy
         run: terraform destroy -auto-approve -var-file="terraform.tfvars" -no-color -lock-timeout=30s
+
+      # --------------------------------------
+      # ✅ Done. Infra is destroyed.
+      # --------------------------------------
