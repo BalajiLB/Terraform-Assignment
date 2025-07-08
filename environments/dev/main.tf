@@ -13,7 +13,7 @@ data "aws_iam_policy_document" "flow_logs_assume_role_policy" {
     actions = ["sts:AssumeRole"]
     principals {
       type        = "Service"
-      identifiers = ["vpc-flow-logs.amazonaws.com"]  # VPC Flow Logs service
+      identifiers = ["vpc-flow-logs.amazonaws.com"] # VPC Flow Logs service
     }
   }
 }
@@ -31,7 +31,7 @@ data "aws_iam_policy_document" "ec2_assume_role_policy" {
     actions = ["sts:AssumeRole"]
     principals {
       type        = "Service"
-      identifiers = ["ec2.amazonaws.com"]  # EC2 service
+      identifiers = ["ec2.amazonaws.com"] # EC2 service
     }
   }
 }
@@ -62,7 +62,7 @@ module "vpc" {
   availability_zone_b  = var.availability_zone_b
   default_route_cidr   = var.default_route_cidr
   aws_region           = var.aws_region
-  flow_logs_role_arn   = aws_iam_role.flow_logs_role.arn  # Attach VPC Flow Logs IAM Role
+  flow_logs_role_arn   = aws_iam_role.flow_logs_role.arn # Attach VPC Flow Logs IAM Role
 }
 
 # --------------------------------------------------------------------
