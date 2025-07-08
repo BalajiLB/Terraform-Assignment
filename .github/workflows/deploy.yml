@@ -63,6 +63,20 @@ jobs:
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v3
 
+            # Step: Debug AWS Caller Identity & Region
+      - name: Check AWS Identity & Region
+        run: |
+          echo "Checking AWS Caller Identity..."
+          aws sts get-caller-identity
+          echo "Checking configured AWS Region..."
+          aws configure get region
+
+      # Step: List EC2 AMIs (optional, to test describe permissions)
+      - name: Test EC2 DescribeImages Permission
+        run: |
+          aws ec2 describe-images --owners amazon --filters "Name=name,Values=amzn2-ami-hvm-*-x86_64-gp2" --query "Images[0].ImageId"
+
+
       # Step 4: Initialize Terraform
       - name: Terraform Init
         run: terraform init -reconfigure -no-color
