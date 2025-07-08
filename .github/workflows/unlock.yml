@@ -1,0 +1,41 @@
+# Name of the GitHub Actions workflow
+name: Terraform Force Unlock
+
+# Trigger this workflow only manually from the GitHub Actions UI
+on:
+  workflow_dispatch:  # Allows manual execution from the Actions tab
+
+# Permissions for the workflow (minimal required)
+permissions:
+  id-token: write      # Needed for AWS OIDC authentication
+  contents: read       # Allows reading the repository content
+
+# Define the jobs
+jobs:
+  unlock:               # Name of the job
+    runs-on: ubuntu-latest  # Use the latest Ubuntu runner
+    defaults:
+      run:
+        working-directory: environments/dev  # Set working directory where terraform is configured
+
+    steps:
+      # Step 1: Authenticate to AWS using OIDC and assume the GitHub Actions IAM role
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::055714170174:role/github-action-workflow  # Replace with your IAM role ARN
+          aws-region: us-west-2                                                  # AWS region of your DynamoDB table
+          role-session-name: GitHubActions-${{ github.run_id }}                  # Unique session name for traceability
+
+      # Step 2: Force delete the Terraform state lock from the DynamoDB table
+      - name: Force Unlock Terraform State Lock in DynamoDB
+        run: |
+          echo "Attempting to force unlock..."
+          aws dynamodb delete-item \
+            --table-name terraform-locks \                   # DynamoDB table name for locks
+            --key '{"LockID": {"S": "my-terraform-state-logabalaji/dev/terraform.tfstate"}}'
+          # ⚠️ Replace "my-terraform-state-logabalaji/dev/terraform.tfstate" with your actual lock key.
+
+      # Step 3: Log completion message
+      - name: Unlock Completed
+        run: echo "Terraform state lock removed."
