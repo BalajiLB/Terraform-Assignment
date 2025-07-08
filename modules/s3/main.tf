@@ -1,18 +1,27 @@
 data "aws_caller_identity" "current" {}
 
+resource "random_string" "bucket_suffix" {
+  length  = 6
+  special = false
+  upper   = false
+}
+# This module creates an S3 bucket with versioning, encryption, logging, and replication setup.
+
+
 # ----------------------------
 # Infra (Main) S3 Bucket
 # ----------------------------
 resource "aws_s3_bucket" "infra_bucket" {
-  bucket = "${var.env}-${var.bucket_name}"
+  bucket = "${var.env}-${var.bucket_name}-${random_string.bucket_suffix.result}" 
 
   tags = merge(
     var.tags,
     {
-      Name = "${var.env}-${var.bucket_name}"
+      Name = "${var.env}-${var.bucket_name}-${random_string.bucket_suffix.result}"
     }
   )
 }
+
 
 # Enable versioning
 resource "aws_s3_bucket_versioning" "versioning" {
@@ -149,15 +158,16 @@ resource "aws_s3_bucket_lifecycle_configuration" "logging_lifecycle" {
 
 # Target bucket for replication
 resource "aws_s3_bucket" "replication_target_bucket" {
-  bucket = var.replication_target_bucket
+  bucket = "${var.replication_target_bucket}-${random_string.bucket_suffix.result}"
 
   tags = merge(
     var.tags,
     {
-      Name = var.replication_target_bucket
+      Name = "${var.replication_target_bucket}-${random_string.bucket_suffix.result}" 
     }
   )
 }
+
 
 # Enable versioning on the target bucket
 resource "aws_s3_bucket_versioning" "replication_target_versioning" {
@@ -168,16 +178,18 @@ resource "aws_s3_bucket_versioning" "replication_target_versioning" {
   }
 }
 
-# Add this for logging_target_bucket
-resource "aws_s3_bucket_notification" "logging_notification" {
-  bucket = aws_s3_bucket.logging_target_bucket.id
-  
-  # Add at least one notification type
-  topic {
-    topic_arn = "arn:aws:sns:${var.aws_region}:${data.aws_caller_identity.current.account_id}:dummy-topic"
-    events    = ["s3:ObjectCreated:*"]
-  }
+# Logging_target_bucket
+resource "aws_s3_bucket" "logging_target_bucket" {
+  bucket = "${var.logging_target_bucket}-${random_string.bucket_suffix.result}" # Updated
+
+  tags = merge(
+    var.tags,
+    {
+      Name = "${var.logging_target_bucket}-${random_string.bucket_suffix.result}" # Updated
+    }
+  )
 }
+
 
 # Enable encryption on replication target bucket
 resource "aws_s3_bucket_server_side_encryption_configuration" "bucket_encryption" {
@@ -282,21 +294,7 @@ resource "aws_s3_bucket_replication_configuration" "infra_replication" {
   }
 }
 
-
-# ----------------------------
-# Logging Target Bucket
-# ----------------------------
-resource "aws_s3_bucket" "logging_target_bucket" {
-  bucket = var.logging_target_bucket
-
-  tags = merge(
-    var.tags,
-    {
-      Name = var.logging_target_bucket
-    }
-  )
-}
-
+ 
 # Grant write access to S3 log delivery
 resource "aws_s3_bucket_acl" "logging_target_acl" {
   bucket = aws_s3_bucket.logging_target_bucket.id
