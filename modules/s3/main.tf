@@ -1,18 +1,22 @@
+# ----------------------------
+# Get AWS account details
+# ----------------------------
 data "aws_caller_identity" "current" {}
 
+# ----------------------------
+# Generate a random string for bucket uniqueness
+# ----------------------------
 resource "random_string" "bucket_suffix" {
   length  = 6
   special = false
   upper   = false
 }
-# This module creates an S3 bucket with versioning, encryption, logging, and replication setup.
-
 
 # ----------------------------
 # Infra (Main) S3 Bucket
 # ----------------------------
 resource "aws_s3_bucket" "infra_bucket" {
-  bucket = "${var.env}-${var.bucket_name}-${random_string.bucket_suffix.result}" 
+  bucket = "${var.env}-${var.bucket_name}-${random_string.bucket_suffix.result}"
 
   tags = merge(
     var.tags,
@@ -22,8 +26,7 @@ resource "aws_s3_bucket" "infra_bucket" {
   )
 }
 
-
-# Enable versioning
+# Enable versioning on Infra bucket
 resource "aws_s3_bucket_versioning" "versioning" {
   bucket = aws_s3_bucket.infra_bucket.id
 
@@ -32,6 +35,7 @@ resource "aws_s3_bucket_versioning" "versioning" {
   }
 }
 
+# Enable versioning on logging bucket
 resource "aws_s3_bucket_versioning" "logging_versioning" {
   bucket = aws_s3_bucket.logging_target_bucket.id
 
@@ -40,8 +44,9 @@ resource "aws_s3_bucket_versioning" "logging_versioning" {
   }
 }
 
-
-# Update the KMS key policy
+# ----------------------------
+# KMS Key for Encryption
+# ----------------------------
 resource "aws_kms_key" "s3_kms" {
   description         = "KMS key for ${var.env}-${var.bucket_name}"
   enable_key_rotation = true
@@ -58,7 +63,6 @@ resource "aws_kms_key" "s3_kms" {
         Action   = "kms:*",
         Resource = "*"
       },
-      # Add this new statement
       {
         Sid    = "AllowS3Services",
         Effect = "Allow",
@@ -83,6 +87,7 @@ resource "aws_kms_key" "s3_kms" {
   })
 }
 
+# Encrypt the Infra bucket with the KMS key
 resource "aws_s3_bucket_server_side_encryption_configuration" "default" {
   bucket = aws_s3_bucket.infra_bucket.id
 
@@ -94,7 +99,7 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "default" {
   }
 }
 
-# Block public access
+# Block public access on the Infra bucket
 resource "aws_s3_bucket_public_access_block" "block_public_access" {
   bucket = aws_s3_bucket.infra_bucket.id
 
@@ -104,14 +109,14 @@ resource "aws_s3_bucket_public_access_block" "block_public_access" {
   restrict_public_buckets = true
 }
 
-# Enable logging
+# Enable access logging for the Infra bucket
 resource "aws_s3_bucket_logging" "logging" {
   bucket        = aws_s3_bucket.infra_bucket.id
   target_bucket = aws_s3_bucket.logging_target_bucket.id
   target_prefix = "${var.env}/logs/"
 }
 
-# Lifecycle rule
+# Add a lifecycle rule to Infra bucket
 resource "aws_s3_bucket_lifecycle_configuration" "infra_bucket_lifecycle" {
   bucket = aws_s3_bucket.infra_bucket.id
 
@@ -123,15 +128,15 @@ resource "aws_s3_bucket_lifecycle_configuration" "infra_bucket_lifecycle" {
       days = 365
     }
 
-    filter {} # Apply to all objects
+    filter {}
 
-    # Add Lifecycle Aborted Uploads Rule (CKV_AWS_300)
     abort_incomplete_multipart_upload {
       days_after_initiation = 7
     }
   }
 }
 
+# Lifecycle for Logging bucket
 resource "aws_s3_bucket_lifecycle_configuration" "logging_lifecycle" {
   bucket = aws_s3_bucket.logging_target_bucket.id
 
@@ -143,7 +148,7 @@ resource "aws_s3_bucket_lifecycle_configuration" "logging_lifecycle" {
       days = 365
     }
 
-    filter {}  # Apply to all objects
+    filter {}
 
     abort_incomplete_multipart_upload {
       days_after_initiation = 7
@@ -151,25 +156,23 @@ resource "aws_s3_bucket_lifecycle_configuration" "logging_lifecycle" {
   }
 }
 
-
 # ----------------------------
 # Replication Setup
 # ----------------------------
 
-# Target bucket for replication
+# Create Replication Target bucket
 resource "aws_s3_bucket" "replication_target_bucket" {
   bucket = "${var.replication_target_bucket}-${random_string.bucket_suffix.result}"
 
   tags = merge(
     var.tags,
     {
-      Name = "${var.replication_target_bucket}-${random_string.bucket_suffix.result}" 
+      Name = "${var.replication_target_bucket}-${random_string.bucket_suffix.result}"
     }
   )
 }
 
-
-# Enable versioning on the target bucket
+# Enable versioning on Replication Target bucket
 resource "aws_s3_bucket_versioning" "replication_target_versioning" {
   bucket = aws_s3_bucket.replication_target_bucket.id
 
@@ -178,20 +181,19 @@ resource "aws_s3_bucket_versioning" "replication_target_versioning" {
   }
 }
 
-# Logging_target_bucket
+# Create Logging Target bucket
 resource "aws_s3_bucket" "logging_target_bucket" {
-  bucket = "${var.logging_target_bucket}-${random_string.bucket_suffix.result}" # Updated
+  bucket = "${var.logging_target_bucket}-${random_string.bucket_suffix.result}"
 
   tags = merge(
     var.tags,
     {
-      Name = "${var.logging_target_bucket}-${random_string.bucket_suffix.result}" # Updated
+      Name = "${var.logging_target_bucket}-${random_string.bucket_suffix.result}"
     }
   )
 }
 
-
-# Enable encryption on replication target bucket
+# Encrypt replication target bucket
 resource "aws_s3_bucket_server_side_encryption_configuration" "bucket_encryption" {
   bucket = aws_s3_bucket.replication_target_bucket.id
 
@@ -203,8 +205,7 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "bucket_encryption
   }
 }
 
-
-# replication_target_bucket
+# Lifecycle rule for Replication Target bucket
 resource "aws_s3_bucket_lifecycle_configuration" "replication_target_lifecycle" {
   bucket = aws_s3_bucket.replication_target_bucket.id
 
@@ -217,14 +218,14 @@ resource "aws_s3_bucket_lifecycle_configuration" "replication_target_lifecycle" 
     }
 
     filter {}
-    
+
     abort_incomplete_multipart_upload {
       days_after_initiation = 7
     }
   }
 }
 
-# Block public access on replication bucket
+# Block public access on Replication bucket
 resource "aws_s3_bucket_public_access_block" "replication_block_public_access" {
   bucket = aws_s3_bucket.replication_target_bucket.id
 
@@ -234,7 +235,7 @@ resource "aws_s3_bucket_public_access_block" "replication_block_public_access" {
   restrict_public_buckets = true
 }
 
-# Replication IAM Role
+# IAM Role for S3 replication
 resource "aws_iam_role" "replication_role" {
   name = "${var.env}-s3-replication-role"
 
@@ -250,7 +251,7 @@ resource "aws_iam_role" "replication_role" {
   })
 }
 
-# Attach replication permissions to the role
+# IAM policy for replication role
 resource "aws_iam_role_policy" "replication_policy" {
   role = aws_iam_role.replication_role.id
 
@@ -276,7 +277,7 @@ resource "aws_iam_role_policy" "replication_policy" {
   })
 }
 
-# Replication configuration
+# Configure Replication from Infra bucket to Replication bucket
 resource "aws_s3_bucket_replication_configuration" "infra_replication" {
   bucket = aws_s3_bucket.infra_bucket.id
   role   = aws_iam_role.replication_role.arn
@@ -290,12 +291,11 @@ resource "aws_s3_bucket_replication_configuration" "infra_replication" {
       storage_class = "STANDARD"
     }
 
-    filter {} # replicate all objects
+    filter {}
   }
 }
 
- 
-# Grant write access to S3 log delivery
+# ACL for logging bucket (log delivery write)
 resource "aws_s3_bucket_acl" "logging_target_acl" {
   bucket = aws_s3_bucket.logging_target_bucket.id
   acl    = "log-delivery-write"
@@ -311,7 +311,7 @@ resource "aws_s3_bucket_public_access_block" "logging_block_public_access" {
   restrict_public_buckets = true
 }
 
-# Enable encryption on logging bucket
+# Encrypt logging bucket
 resource "aws_s3_bucket_server_side_encryption_configuration" "logging_bucket_encryption" {
   bucket = aws_s3_bucket.logging_target_bucket.id
 
@@ -322,7 +322,7 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "logging_bucket_en
   }
 }
 
-# Replication_target_bucket
+# Enable access logging for replication target bucket
 resource "aws_s3_bucket_logging" "replication_target_logging" {
   bucket        = aws_s3_bucket.replication_target_bucket.id
   target_bucket = aws_s3_bucket.logging_target_bucket.id
@@ -330,9 +330,8 @@ resource "aws_s3_bucket_logging" "replication_target_logging" {
 }
 
 # ----------------------------
-# Enable Event Notifications (CKV2_AWS_62)
+# Enable Event Notifications (Example SNS topic)
 # ----------------------------
-
 resource "aws_s3_bucket_notification" "infra_notification" {
   bucket = aws_s3_bucket.infra_bucket.id
 
@@ -342,9 +341,8 @@ resource "aws_s3_bucket_notification" "infra_notification" {
   }
 }
 
-
 # ----------------------------
-# Restrict Default Security Group (CKV2_AWS_12)
+# Restrict Default VPC Security Group (CKV2_AWS_12)
 # ----------------------------
 resource "aws_default_security_group" "default" {
   vpc_id = var.vpc_id

@@ -1,15 +1,19 @@
-
+# --------------------------------------------------------------------
+# AWS Provider
+# --------------------------------------------------------------------
 provider "aws" {
   region = var.aws_region
 }
 
-# VPC Flow Logs Role
+# --------------------------------------------------------------------
+# IAM Role for VPC Flow Logs
+# --------------------------------------------------------------------
 data "aws_iam_policy_document" "flow_logs_assume_role_policy" {
   statement {
     actions = ["sts:AssumeRole"]
     principals {
       type        = "Service"
-      identifiers = ["vpc-flow-logs.amazonaws.com"]
+      identifiers = ["vpc-flow-logs.amazonaws.com"]  # VPC Flow Logs service
     }
   }
 }
@@ -19,15 +23,15 @@ resource "aws_iam_role" "flow_logs_role" {
   assume_role_policy = data.aws_iam_policy_document.flow_logs_assume_role_policy.json
 }
 
-# EC2 IAM Role
-
+# --------------------------------------------------------------------
+# IAM Role for EC2 Instances
+# --------------------------------------------------------------------
 data "aws_iam_policy_document" "ec2_assume_role_policy" {
   statement {
     actions = ["sts:AssumeRole"]
-
     principals {
       type        = "Service"
-      identifiers = ["ec2.amazonaws.com"]
+      identifiers = ["ec2.amazonaws.com"]  # EC2 service
     }
   }
 }
@@ -37,14 +41,17 @@ resource "aws_iam_role" "ec2_role" {
   assume_role_policy = data.aws_iam_policy_document.ec2_assume_role_policy.json
 }
 
-# KMS Key for EC2 and S3 encryption
+# --------------------------------------------------------------------
+# KMS Key for S3 and EC2 encryption
+# --------------------------------------------------------------------
 resource "aws_kms_key" "s3_kms" {
   description         = "KMS key for S3 bucket and EC2 volume encryption"
   enable_key_rotation = true
 }
 
-
-#vpc module (2-public subnets)
+# --------------------------------------------------------------------
+# VPC Module: Creates VPC with 2 public subnets and Flow Logs
+# --------------------------------------------------------------------
 module "vpc" {
   source               = "../../modules/vpc"
   env                  = var.env
@@ -55,17 +62,18 @@ module "vpc" {
   availability_zone_b  = var.availability_zone_b
   default_route_cidr   = var.default_route_cidr
   aws_region           = var.aws_region
-  flow_logs_role_arn   = aws_iam_role.flow_logs_role.arn
-
+  flow_logs_role_arn   = aws_iam_role.flow_logs_role.arn  # Attach VPC Flow Logs IAM Role
 }
 
-#sg module  
+# --------------------------------------------------------------------
+# Security Group Module: Configures SG with dynamic ingress/egress
+# --------------------------------------------------------------------
 module "sg" {
   source = "../../modules/sg"
   env    = var.env
   vpc_id = module.vpc.vpc_id
 
-  # Ingress split variables
+  # Ingress variables
   ingress_descriptions = var.ingress_descriptions
   ingress_from_ports   = var.ingress_from_ports
   ingress_to_ports     = var.ingress_to_ports
@@ -82,7 +90,9 @@ module "sg" {
   tags = var.tags
 }
 
-#ec2 module
+# --------------------------------------------------------------------
+# EC2 Module: Deploys EC2 instances in public subnets with SG and KMS encryption
+# --------------------------------------------------------------------
 module "ec2" {
   source             = "../../modules/ec2"
   env                = var.env
@@ -94,9 +104,9 @@ module "ec2" {
   kms_key_arn        = aws_kms_key.s3_kms.arn
 }
 
-
-#s3 module
-
+# --------------------------------------------------------------------
+# S3 Module: Creates buckets with encryption, replication, and logging
+# --------------------------------------------------------------------
 module "s3" {
   source                    = "../../modules/s3"
   env                       = var.env
