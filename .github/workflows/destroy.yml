@@ -75,4 +75,4 @@ jobs:
       # Step 6: Destroy the Terraform resources
       # ⚠️ This step performs the actual destroy. Keep it only for authorized manual triggers!
       - name: Terraform Destroy (manual approval)
-        run: terraform destroy -auto-approve -var-file="terraform.tfvars" -no-color -lock-timeout=30s
+        run: terraform destroy -auto-approve -no-color -lock-timeout=300s
